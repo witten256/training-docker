@@ -1,0 +1,47 @@
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    # コンテナ間の依存関係の定義。データベースサーバが先に起動している必要があるため。
+    depends_on:
+      - db
+    # 環境変数の定義。データベースのパスワードなどは環境変数として定義
+    # .envは.gitignoreでコミットから除外している
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DB=${MYSQL_DB}
+    networks:
+      - app-network
+    # ログ出力用に共有フォルダを設定
+    volumes:
+      - ./web/logs:/app/logs
+    command: python app.py
+
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    # データの永続化のために、名前付きボリュームdb-dataとコンテナ内のディレクトリを動機
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - app-network
+
+# サービスで利用するネットワーク
+networks:
+  app-network:
+    driver: bridge
+
+# dockerの名前付きvolume。dockerが管理する領域。
+volumes:
+  db-data:
